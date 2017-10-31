@@ -4,7 +4,7 @@ from rpython.rlib import jit
 from asminterp import parser as p
 from asminterp.model import Integer
 
-driver = jit.JitDriver(greens=["i", "bc"], reds="auto")
+driver = jit.JitDriver(greens=["i", "bc", "bytecode"], reds=["f"])
 
 class Frame(object):
     def __init__(self):
@@ -25,7 +25,7 @@ def interp(bytecode, print_fn):
     f = Frame()
     bc = bytecode.bc
     while i < len(bc):
-        driver.jit_merge_point(bc=bc, i=i)
+        driver.jit_merge_point(bc=bc, i=i, bytecode=bytecode, f=f)
         code = ord(bc[i])
         arg0 = ord(bc[i + 1])
         arg1 = ord(bc[i + 2])
@@ -52,6 +52,7 @@ def interp(bytecode, print_fn):
                 continue
         elif code == p.JUMP:
             i = arg0 * 3
+            driver.can_enter_jit(i=i, bc=bc, bytecode=bytecode, f=f)
             continue
         elif code == p.PRINT:
             print_fn(f.pop().repr())

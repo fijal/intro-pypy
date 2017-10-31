@@ -1,0 +1,20 @@
+-constants-
+int 100000000
+-code-
+load_constant 0
+store 1
+load_constant 0
+store 0
+load 0
+jump_if_false 15
+load 0
+load_integer 1
+sub
+store 0
+load 1
+load_integer 13
+add
+store 1
+jump 4
+load 1
+print

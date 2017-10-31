@@ -57,10 +57,11 @@ def interp(bytecode, print_fn):
                 continue
         elif code == p.JUMP:
             i = arg0 * 3
+            driver.can_enter_jit(bc=bc, bytecode=bytecode, i=i, f=f)
             continue
         elif code == p.PRINT:
             print_fn(f.pop().repr())
         else:
-            print("Unknown bytecode %d" % code)
+            print("Unknown bytecode %d" % code) 
             raise Exception("unknown bytecode %s" % p.OPCODES[code])
         i += 3
