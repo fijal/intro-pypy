@@ -8,6 +8,9 @@ from interp.interpreter import interpret
 
 lexer = get_lexer()
 
+def printfn(obj):
+    print obj.str()
+
 def main(argv):
     if len(argv) != 2:
         print __doc__
@@ -18,7 +21,7 @@ def main(argv):
         print "Error reading " + argv[1]
         return 2
     ast = parser.parse(lexer.lex(contents))
-    interpret(ast)
+    interpret(ast, printfn)
     return 0
 
 def target(*args):
