@@ -1,6 +1,6 @@
 
 from rply.token import BaseBox
-from interp.model import Integer
+from interp.model import Integer, FunctionObj, ClassObj, ReturnException
 
 class AstNode(BaseBox):
     def __eq__(self, other):
@@ -51,18 +51,26 @@ class BinOp(AstNode):
         self.right = right
 
     def eval(self, frame):
+        self.left.eval(frame)
+        self.right.eval(frame)
+        rightval = frame.pop()
+        leftval = frame.pop()
         if self.op == "+":
-            self.left.eval(frame)
-            self.right.eval(frame)
-            rightval = frame.pop()
-            leftval = frame.pop()
             frame.push(leftval.add(rightval))
-            return
-        assert False
+        elif self.op == '==':
+            frame.push(leftval.equals(rightval))
+        elif self.op == '<':
+            frame.push(leftval.lt(rightval))
+        else:
+            assert False
 
 class Return(AstNode):
     def __init__(self, elem):
         self.elem = elem
+
+    def eval(self, frame):
+        self.elem.eval(frame)
+        raise ReturnException(frame.pop())
 
 class Discard(AstNode):
     def __init__(self, expr):
@@ -96,27 +104,44 @@ class Function(AstNode):
         self.body = body
 
     def eval(self, frame):
-        for elem in self.body:
-            elem.eval(frame)
+        frame.locals[self.name] = FunctionObj(self.name, self.arglist, self.body)
 
 class If(AstNode):
     def __init__(self, expr, stmt_list):
         self.expr = expr
         self.stmt_list = stmt_list
 
+    def eval(self, frame):
+        self.expr.eval(frame)
+        if frame.pop().is_true():
+            for s in self.stmt_list:
+                s.eval(frame)
+
 class DottedExpr(AstNode):
     def __init__(self, atom, ident):
         self.atom = atom
         self.ident = ident
 
+    def eval(self, frame):
+        self.atom.eval(frame)
+        obj = frame.pop()
+        frame.push(obj.getattr(self.ident))
+
 class Atom(AstNode):
     def __init__(self, name):
         self.name = name
+
+    def eval(self, frame):
+        frame.push(frame.getlocal(self.name))
 
 class Assign(AstNode):
     def __init__(self, v, expr):
         self.v = v
         self.expr = expr
+
+    def eval(self, frame):
+        self.expr.eval(frame)
+        frame.locals[self.v] = frame.pop()
 
 class DottedAssign(AstNode):
     def __init__(self, atom, v, expr):
@@ -124,15 +149,31 @@ class DottedAssign(AstNode):
         self.v = v
         self.expr = expr
 
+    def eval(self, frame):
+        self.atom.eval(frame)
+        obj = frame.pop()
+        self.expr.eval(frame)
+        obj.setattr(self.v, frame.pop())
+
 class While(AstNode):
     def __init__(self, expr, stmt_list):
         self.expr = expr
         self.stmt_list = stmt_list
 
+    def eval(self, frame):
+        self.expr.eval(frame)
+        while frame.pop().is_true():
+            for s in self.stmt_list:
+                s.eval(frame)
+            self.expr.eval(frame)
+
 class Class(AstNode):
     def __init__(self, name, arglist):
         self.name = name
         self.arglist = arglist
+
+    def eval(self, frame):
+        frame.locals[self.name] = ClassObj(self.name, self.arglist)
 
 class Call(AstNode):
     def __init__(self, name, arglist):
@@ -140,8 +181,8 @@ class Call(AstNode):
         self.arglist = arglist
 
     def eval(self, frame):
-        assert self.name == 'print'
-        elem = self.arglist[0].eval(frame)
-        frame.printfn(frame.stack[-1])
-
-
+        args = []
+        for a in self.arglist:
+            a.eval(frame)
+            args.append(frame.pop())
+        frame.getlocal(self.name).call(frame, args)
