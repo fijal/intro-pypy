@@ -90,7 +90,7 @@ def expression_binop(p):
 
 @pg.production('expression : INTEGER')
 def expression_integer(p):
-    return ast.Integer(int(p[0].getstr()))
+    return ast.AstInteger(int(p[0].getstr()))
 
 @pg.production('expression : atom')
 def expression_identifier(p):

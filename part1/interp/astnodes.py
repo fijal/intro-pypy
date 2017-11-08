@@ -37,7 +37,7 @@ class ArgumentList(AstNode):
             # ^^^ crucial, otherwise can be BaseBox and cur.next would explode
         return lst
 
-class Integer(AstNode):
+class AstInteger(AstNode):
     def __init__(self, v):
         self.intval = v
 
@@ -49,6 +49,13 @@ class BinOp(AstNode):
         self.op = op
         self.left = left
         self.right = right
+
+    def eval(self, printfn):
+        if self.op == "+":
+            leftval = self.left.eval(printfn)
+            rightval = self.right.eval(printfn)
+            return leftval.add(rightval)
+        assert False
 
 class Return(AstNode):
     def __init__(self, elem):

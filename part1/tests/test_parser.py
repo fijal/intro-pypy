@@ -17,7 +17,7 @@ class TestParser(object):
         assert r == ast.Program([
             ast.Function('main', [],
                 [
-                ast.Return(ast.BinOp('+', ast.Integer(3), ast.Integer(2)))
+                ast.Return(ast.BinOp('+', ast.AstInteger(3), ast.AstInteger(2)))
                 ])])
 
     def test_parse_if_while_expr(self):
@@ -31,11 +31,11 @@ class TestParser(object):
             """)
         exp = ast.Program([
             ast.Function('main', [], [
-                ast.If(ast.Integer(3), [
-                    ast.Discard(ast.Integer(1))
+                ast.If(ast.AstInteger(3), [
+                    ast.Discard(ast.AstInteger(1))
                 ]),
-                ast.While(ast.BinOp('<', ast.Atom('x'), ast.Integer(2)), [
-                    ast.Assign('x', ast.BinOp('+', ast.Atom('x'), ast.Integer(2)))
+                ast.While(ast.BinOp('<', ast.Atom('x'), ast.AstInteger(2)), [
+                    ast.Assign('x', ast.BinOp('+', ast.Atom('x'), ast.AstInteger(2)))
                 ])
             ])
         ])
@@ -57,12 +57,12 @@ class TestParser(object):
             ast.Class('X', ['a', 'b', 'c']),
             ast.Function('main', [], [
                 ast.Assign('x', ast.Call('X', [
-                    ast.Integer(1), ast.Integer(2), ast.Integer(3)
+                    ast.AstInteger(1), ast.AstInteger(2), ast.AstInteger(3)
                 ]))
             ]),
             ast.Function('f2', ['x'], [
                 ast.DottedAssign(ast.Atom('x'), 'x', ast.BinOp('+',
-                    ast.DottedExpr(ast.Atom('x'), 'a'), ast.Integer(3))),
+                    ast.DottedExpr(ast.Atom('x'), 'a'), ast.AstInteger(3))),
                 ast.Assign('x', ast.Call('X', []))
             ])
         ])

@@ -22,3 +22,9 @@ class TestInterpreter(object):
         """)
         assert p[0].intval == 13
 
+    def test_addition(self):
+        p = self.interp("""
+        fun main() {
+            print(1 + 2);
+        }
+        """)

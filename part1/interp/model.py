@@ -6,6 +6,11 @@ class Integer(Root):
     def __init__(self, intval):
         self.intval = intval
 
+    def add(self, other):
+        if not isinstance(other, Integer):
+            assert False
+        return Integer(self.intval + other.intval)
+
     def str(self):
         return str(self.intval)
 
