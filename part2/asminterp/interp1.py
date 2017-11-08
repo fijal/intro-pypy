@@ -39,9 +39,9 @@ def interp(bytecode, print_fn):
                 i = arg0 * 3
                 continue
         elif code == p.JUMP:
+            i = arg0 * 3
             driver.can_enter_jit(bc=bc, i=i, locals=locals, stack=stack,
                                  bytecode=bytecode)
-            i = arg0 * 3
             continue
         elif code == p.PRINT:
             print_fn(stack.pop().repr())
