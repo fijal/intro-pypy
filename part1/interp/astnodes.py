@@ -16,9 +16,9 @@ class Program(AstNode):
     def __init__(self, lst):
         self.lst = lst
 
-    def eval(self, printfn):
+    def eval(self, frame):
         for item in self.lst:
-            item.eval(printfn)
+            item.eval(frame)
 
 class ArgumentList(AstNode):
     def __init__(self, elem, next):
@@ -41,8 +41,8 @@ class AstInteger(AstNode):
     def __init__(self, v):
         self.intval = v
 
-    def eval(self, printfn):
-        return Integer(self.intval)
+    def eval(self, frame):
+        frame.push(Integer(self.intval))
 
 class BinOp(AstNode):
     def __init__(self, op, left, right):
@@ -50,11 +50,14 @@ class BinOp(AstNode):
         self.left = left
         self.right = right
 
-    def eval(self, printfn):
+    def eval(self, frame):
         if self.op == "+":
-            leftval = self.left.eval(printfn)
-            rightval = self.right.eval(printfn)
-            return leftval.add(rightval)
+            self.left.eval(frame)
+            self.right.eval(frame)
+            rightval = frame.pop()
+            leftval = frame.pop()
+            frame.push(leftval.add(rightval))
+            return
         assert False
 
 class Return(AstNode):
@@ -65,8 +68,9 @@ class Discard(AstNode):
     def __init__(self, expr):
         self.expr = expr
 
-    def eval(self, printfn):
-        self.expr.eval(printfn)
+    def eval(self, frame):
+        self.expr.eval(frame)
+        frame.pop()
 
 class StatementList(AstNode):
     def __init__(self, elem, next):
@@ -91,9 +95,9 @@ class Function(AstNode):
         self.arglist = arglist
         self.body = body
 
-    def eval(self, printfn):
+    def eval(self, frame):
         for elem in self.body:
-            elem.eval(printfn)
+            elem.eval(frame)
 
 class If(AstNode):
     def __init__(self, expr, stmt_list):
@@ -135,7 +139,9 @@ class Call(AstNode):
         self.name = name
         self.arglist = arglist
 
-    def eval(self, printfn):
+    def eval(self, frame):
         assert self.name == 'print'
-        printfn(self.arglist[0].eval(printfn))
+        elem = self.arglist[0].eval(frame)
+        frame.printfn(frame.stack[-1])
+
 
