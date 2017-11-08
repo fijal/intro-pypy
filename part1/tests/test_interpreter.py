@@ -20,5 +20,5 @@ class TestInterpreter(object):
               print(13);
           }
         """)
-        assert p[0].intval == 42
+        assert p[0].intval == 13
 

@@ -1,4 +1,10 @@
+
+from rpython.rlib.objectmodel import specialize
+
+@specialize.argtype(0)
 def f(x):
+    if isinstance(x, int):
+        return "foo"
     return x
 
 def entry_point(argv):

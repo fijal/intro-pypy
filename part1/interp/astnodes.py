@@ -1,5 +1,6 @@
 
 from rply.token import BaseBox
+from interp.model import Integer
 
 class AstNode(BaseBox):
     def __eq__(self, other):
@@ -14,6 +15,10 @@ class AstNode(BaseBox):
 class Program(AstNode):
     def __init__(self, lst):
         self.lst = lst
+
+    def eval(self, printfn):
+        for item in self.lst:
+            item.eval(printfn)
 
 class ArgumentList(AstNode):
     def __init__(self, elem, next):
@@ -36,6 +41,9 @@ class Integer(AstNode):
     def __init__(self, v):
         self.intval = v
 
+    def eval(self, printfn):
+        return Integer(self.intval)
+
 class BinOp(AstNode):
     def __init__(self, op, left, right):
         self.op = op
@@ -49,6 +57,9 @@ class Return(AstNode):
 class Discard(AstNode):
     def __init__(self, expr):
         self.expr = expr
+
+    def eval(self, printfn):
+        self.expr.eval(printfn)
 
 class StatementList(AstNode):
     def __init__(self, elem, next):
@@ -72,6 +83,10 @@ class Function(AstNode):
         self.name = name
         self.arglist = arglist
         self.body = body
+
+    def eval(self, printfn):
+        for elem in self.body:
+            elem.eval(printfn)
 
 class If(AstNode):
     def __init__(self, expr, stmt_list):
@@ -112,3 +127,8 @@ class Call(AstNode):
     def __init__(self, name, arglist):
         self.name = name
         self.arglist = arglist
+
+    def eval(self, printfn):
+        assert self.name == 'print'
+        printfn(self.arglist[0].eval(printfn))
+
