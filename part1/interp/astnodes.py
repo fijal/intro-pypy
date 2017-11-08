@@ -4,7 +4,7 @@ from interp.model import Integer, Object
 
 from rpython.rlib import jit
 
-driver = jit.JitDriver(greens=["self"], reds=["frame"], is_recursive=True)
+driver = jit.JitDriver(greens=["i", "self", "stmt"], reds=["frame"], is_recursive=True)
 
 
 class AstNode(BaseBox):
@@ -18,8 +18,9 @@ class AstNode(BaseBox):
         return '<%s %s>' % (self.__class__.__name__, d)
 
 class Program(AstNode):
+    _immutable_fields_ = ['lst[*]']
     def __init__(self, lst):
-        self.lst = lst
+        self.lst = lst[:]
 
     def eval(self, frame):
         d = {}
@@ -29,6 +30,7 @@ class Program(AstNode):
         d['main'].call(frame)
 
 class ArgumentList(AstNode):
+    _immutable_fields_ = ['elem', 'next']
     def __init__(self, elem, next):
         self.v = elem
         self.next = next
@@ -46,6 +48,7 @@ class ArgumentList(AstNode):
         return lst
 
 class AstInteger(AstNode):
+    _immutable_fields_ = ['v']
     def __init__(self, v):
         self.intval = v
 
@@ -53,6 +56,7 @@ class AstInteger(AstNode):
         frame.push(Integer(self.intval))
 
 class BinOp(AstNode):
+    _immutable_fields_ = ['op', 'left', 'right']
     def __init__(self, op, left, right):
         self.op = op
         self.left = left
@@ -71,10 +75,12 @@ class BinOp(AstNode):
             assert False
 
 class Exit(Exception):
+    _immutable_fields_ = ['val']
     def __init__(self, val):
         self.val = val
 
 class Return(AstNode):
+    _immutable_fields_ = ['elem']
     def __init__(self, elem):
         self.elem = elem
 
@@ -83,6 +89,7 @@ class Return(AstNode):
         raise Exit(frame.pop())
 
 class Discard(AstNode):
+    _immutable_fields_ = ['expr']
     def __init__(self, expr):
         self.expr = expr
 
@@ -91,6 +98,7 @@ class Discard(AstNode):
         frame.pop()
 
 class StatementList(AstNode):
+    _immutable_fields_ = ['elem', 'next']
     def __init__(self, elem, next):
         self.elem = elem
         self.next = next
@@ -108,10 +116,11 @@ class StatementList(AstNode):
         return lst
 
 class Function(AstNode):
+    _immutable_fields_ = ['name', 'arglist[*]', 'body[*]']
     def __init__(self, name, arglist, body):
         self.name = name
-        self.arglist = arglist
-        self.body = body
+        self.arglist = arglist[:]
+        self.body = body[:]
 
     def getname(self):
         return self.name
@@ -123,11 +132,13 @@ class Function(AstNode):
             elem.eval(frame)
 
 class If(AstNode):
+    _immutable_fields_ = ['expr', 'stmt_list[*]']
     def __init__(self, expr, stmt_list):
         self.expr = expr
-        self.stmt_list = stmt_list
+        self.stmt_list = stmt_list[:]
 
 class DottedExpr(AstNode):
+    _immutable_fields_ = ['atom', 'ident']
     def __init__(self, atom, ident):
         self.atom = atom
         self.ident = ident
@@ -138,6 +149,7 @@ class DottedExpr(AstNode):
         frame.push(obj.getitem(self.ident))
 
 class Atom(AstNode):
+    _immutable_fields_ = ['name']
     def __init__(self, name):
         self.name = name
 
@@ -145,6 +157,7 @@ class Atom(AstNode):
         frame.push(frame.locals[self.name])
 
 class Assign(AstNode):
+    _immutable_fields_ = ['v', 'expr']
     def __init__(self, v, expr):
         self.v = v
         self.expr = expr
@@ -154,6 +167,7 @@ class Assign(AstNode):
         frame.locals[self.v] = frame.pop()
 
 class DottedAssign(AstNode):
+    _immutable_fields_ = ['atom', 'v', 'expr']
     def __init__(self, atom, v, expr):
         self.atom = atom
         self.v = v
@@ -167,23 +181,30 @@ class DottedAssign(AstNode):
         obj.setitem(self.v, val)
 
 class While(AstNode):
+    _immutable_fields_ = ['expr', 'stmt_list[*]']
     def __init__(self, expr, stmt_list):
         self.expr = expr
-        self.stmt_list = stmt_list
+        self.stmt_list = stmt_list[:]
 
     def eval(self, frame):
+        stmt = None
+        i = 0
         while True:
-            driver.jit_merge_point(self=self, frame=frame)
             self.expr.eval(frame)
             if not frame.pop().is_true():
                 return
-            for stmt in self.stmt_list:
+            driver.jit_merge_point(self=self, frame=frame, stmt=stmt, i=i)
+            i = 0
+            while i < len(self.stmt_list):
+                stmt = self.stmt_list[i]
                 stmt.eval(frame)
+                i += 1
 
 class Class(AstNode):
+    _immutable_fields_ = ['arglist[*]']
     def __init__(self, name, arglist):
         self.name = name
-        self.arglist = arglist
+        self.arglist = arglist[:]
 
     def getname(self):
         return self.name
@@ -195,9 +216,10 @@ class Class(AstNode):
         raise Exit(Object(d))
 
 class Call(AstNode):
+    _immutable_fields_ = ['name', 'arglist[*]']
     def __init__(self, name, arglist):
         self.name = name
-        self.arglist = arglist
+        self.arglist = arglist[:]
 
     def eval(self, frame):
         if self.name == 'print':
