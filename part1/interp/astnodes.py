@@ -1,6 +1,11 @@
 
 from rply.token import BaseBox
-from interp.model import Integer
+from interp.model import Integer, Object
+
+from rpython.rlib import jit
+
+driver = jit.JitDriver(greens=["self"], reds=["frame"], is_recursive=True)
+
 
 class AstNode(BaseBox):
     def __eq__(self, other):
@@ -17,8 +22,11 @@ class Program(AstNode):
         self.lst = lst
 
     def eval(self, frame):
+        d = {}
         for item in self.lst:
-            item.eval(frame)
+            d[item.getname()] = item
+        frame.globals = d
+        d['main'].call(frame)
 
 class ArgumentList(AstNode):
     def __init__(self, elem, next):
@@ -51,18 +59,28 @@ class BinOp(AstNode):
         self.right = right
 
     def eval(self, frame):
+        self.left.eval(frame)
+        self.right.eval(frame)
+        rightval = frame.pop()
+        leftval = frame.pop()
         if self.op == "+":
-            self.left.eval(frame)
-            self.right.eval(frame)
-            rightval = frame.pop()
-            leftval = frame.pop()
             frame.push(leftval.add(rightval))
-            return
-        assert False
+        elif self.op == "<":
+            frame.push(leftval.lt(rightval))
+        else:
+            assert False
+
+class Exit(Exception):
+    def __init__(self, val):
+        self.val = val
 
 class Return(AstNode):
     def __init__(self, elem):
         self.elem = elem
+
+    def eval(self, frame):
+        self.elem.eval(frame)
+        raise Exit(frame.pop())
 
 class Discard(AstNode):
     def __init__(self, expr):
@@ -95,7 +113,12 @@ class Function(AstNode):
         self.arglist = arglist
         self.body = body
 
-    def eval(self, frame):
+    def getname(self):
+        return self.name
+
+    def call(self, frame):
+        for i in range(len(self.arglist) - 1, -1, -1):
+            frame.locals[self.arglist[i]] = frame.pop()
         for elem in self.body:
             elem.eval(frame)
 
@@ -108,6 +131,11 @@ class DottedExpr(AstNode):
     def __init__(self, atom, ident):
         self.atom = atom
         self.ident = ident
+
+    def eval(self, frame):
+        self.atom.eval(frame)
+        obj = frame.pop()
+        frame.push(obj.getitem(self.ident))
 
 class Atom(AstNode):
     def __init__(self, name):
@@ -131,15 +159,40 @@ class DottedAssign(AstNode):
         self.v = v
         self.expr = expr
 
+    def eval(self, frame):
+        self.atom.eval(frame)
+        obj = frame.pop()
+        self.expr.eval(frame)
+        val = frame.pop()
+        obj.setitem(self.v, val)
+
 class While(AstNode):
     def __init__(self, expr, stmt_list):
         self.expr = expr
         self.stmt_list = stmt_list
 
+    def eval(self, frame):
+        while True:
+            driver.jit_merge_point(self=self, frame=frame)
+            self.expr.eval(frame)
+            if not frame.pop().is_true():
+                return
+            for stmt in self.stmt_list:
+                stmt.eval(frame)
+
 class Class(AstNode):
     def __init__(self, name, arglist):
         self.name = name
         self.arglist = arglist
+
+    def getname(self):
+        return self.name
+
+    def call(self, frame):
+        d = {}
+        for i in range(len(self.arglist) -1, -1, -1):
+            d[self.arglist[i]] = frame.pop()
+        raise Exit(Object(d))
 
 class Call(AstNode):
     def __init__(self, name, arglist):
@@ -147,8 +200,17 @@ class Call(AstNode):
         self.arglist = arglist
 
     def eval(self, frame):
-        assert self.name == 'print'
-        elem = self.arglist[0].eval(frame)
-        frame.printfn(frame.stack[-1])
-
-
+        if self.name == 'print':
+            self.arglist[0].eval(frame)
+            frame.printfn(frame.stack[-1])
+        else:
+            try:
+                newframe = frame.enter()
+                for arg in self.arglist:
+                    arg.eval(newframe)
+                frame.globals[self.name].call(newframe)
+            except Exit as e:
+                val = e.val
+            else:
+                val = Integer(0)
+            frame.push(val)

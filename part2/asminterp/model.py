@@ -14,6 +14,10 @@ class Integer(Base):
         assert isinstance(other, Integer)
         return Integer(self.intval + other.intval)
 
+    def lt(self, other):
+        assert isinstance(other, Integer)
+        return Integer(self.intval < other.intval)            
+
     def is_true(self):
         return self.intval != 0
 
