@@ -113,10 +113,17 @@ class Atom(AstNode):
     def __init__(self, name):
         self.name = name
 
+    def eval(self, frame):
+        frame.push(frame.locals[self.name])
+
 class Assign(AstNode):
     def __init__(self, v, expr):
         self.v = v
         self.expr = expr
+
+    def eval(self, frame):
+        self.expr.eval(frame)
+        frame.locals[self.v] = frame.pop()
 
 class DottedAssign(AstNode):
     def __init__(self, atom, v, expr):

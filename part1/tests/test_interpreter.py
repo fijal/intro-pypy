@@ -28,3 +28,12 @@ class TestInterpreter(object):
             print(1 + 2);
         }
         """)
+        
+    def test_variable(self):
+        p = self.interp("""
+        fun main() {
+            a = 2;
+            print(a);
+        }
+        """)
+        assert p[0].intval == 2
