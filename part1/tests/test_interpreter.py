@@ -55,6 +55,28 @@ class TestInterpreter(object):
         """)
         assert p[0].intval == 10
 
+    def test_if(self):
+        p = self.interp("""
+        fun main() {
+            i = 3;
+            if (i < 15) {
+               print(i);
+            }
+        }
+        """)
+        assert p[0].intval == 3;
+        p = self.interp("""
+        fun main() {
+            i = 3;
+            if (i < 2) {
+               print(i);
+            }
+            print(10);
+        }
+        """)
+        assert p[0].intval == 10;
+        assert len(p) == 1
+
     def test_function_call(self):
         p = self.interp("""
         fun f() {
