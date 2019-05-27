@@ -5,10 +5,8 @@ from interp.interpreter import run
 from interp.astnodes import Bytecode
 
 class TestInterpreter(object):
-    def setup_method(self, meth):
-        self.printed = []
-
     def interp(self, code):
+        self.printed = []
         def printfn(w_obj):
             self.printed.append(w_obj)
 
@@ -64,7 +62,7 @@ class TestInterpreter(object):
             }
         }
         """)
-        assert p[0].intval == 3;
+        assert p[0].intval == 3
         p = self.interp("""
         fun main() {
             i = 3;
