@@ -13,6 +13,8 @@ class FunctionCode(object):
         self.arglist = arglist
 
 class Bytecode(object):
+    _immutable_fields_ = ['names']
+
     def __init__(self):
         self.codes = {}
         self.names = []
@@ -25,6 +27,7 @@ class Bytecode(object):
 
     def end_current_function(self):
         self.current_function.code = "".join(self.current_code)
+        self.current_function.nlocals = len(self.names)
         self.current_function = None
 
     def register_name(self, name):
@@ -166,6 +169,7 @@ class Function(AstNode):
     def eval(self, bc):
         bc.new_function(self.name, self.arglist)
         for elem in self.body:
+            print elem
             elem.eval(bc)
         bc.end_current_function()
 
@@ -176,6 +180,14 @@ class If(AstNode):
     def __init__(self, expr, stmt_list):
         self.expr = expr
         self.stmt_list = stmt_list[:]
+
+    def eval(self, bc):
+        self.expr.eval(bc)
+        pos1 = bc.get_pos()
+        bc.emit1(opcodes.JUMP_IF_FALSE, 0)
+        for stmt in self.stmt_list:
+            stmt.eval(bc)
+        bc.patch_pos(pos1 + 1, bc.get_pos())
 
 class DottedExpr(AstNode):
     def __init__(self, atom, ident):

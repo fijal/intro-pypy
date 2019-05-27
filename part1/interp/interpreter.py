@@ -1,12 +1,14 @@
 
+from rpython.rlib.jit import JitDriver, promote
+
 from interp.model import Integer, NoneObject
 from interp import opcodes
 
 class Frame(object):
     next = None
 
-    def __init__(self):
-        self.locals = {}
+    def __init__(self, nlocals):
+        self.locals = [None] * nlocals
         self.stack = []
 
     def push(self, item):
@@ -15,31 +17,39 @@ class Frame(object):
     def pop(self):
         return self.stack.pop()
 
-    def setlocal(self, name, value):
-        self.locals[name] = value
+    def setlocal(self, no, value):
+        self.locals[no] = value
 
-    def getlocal(self, name):
-        return self.locals[name]
+    def getlocal(self, no):
+        return self.locals[no]
 
 def run(bc, printfn):
     interpreter = Interpreter(bc, printfn)
     interpreter.interpret(bc.codes['main'])
 
+def printable_loc(i, bc, interp):
+    return "POS:" + str(i)
+
+driver = JitDriver(greens = ['i', 'bc', 'self'], reds = ['frame'],
+                   get_printable_location=printable_loc)
 
 class Interpreter(object):
+    _immutable_fields_ = ['bc']
+
     def __init__(self, bc, printfn):
         self.bc = bc
         self.printfn = printfn
 
     def interpret(self, func):
         bc = func.code
-        frame = Frame()
+        frame = Frame(func.nlocals)
         i = 0
-        arg0 = 0
-        arg1 = 0
         while i < len(bc):
+            driver.jit_merge_point(i=i, bc=bc, frame=frame, self=self)
             code = ord(bc[i])
             i += 1
+            arg0 = 0
+            arg1 = 0
             if code >= 100:
                 arg0 = ord(bc[i])
                 i += 1
@@ -66,6 +76,7 @@ class Interpreter(object):
                     i = arg0
             elif code == opcodes.JUMP_ABSOLUTE:
                 i = arg0
+                driver.can_enter_jit(i=i, bc=bc, frame=frame, self=self)
             else:
                 print "opcode " + str(code) + " not implemented"
                 raise Exception("unimplemented opcode " + str(code))
@@ -81,12 +92,10 @@ class Interpreter(object):
         frame.push(left.lt(right))
 
     def assign(self, frame, no):
-        name = self.bc.get_name(no)
-        frame.setlocal(name, frame.pop())
+        frame.setlocal(no, frame.pop())
 
     def load_name(self, frame, no):
-        name = self.bc.get_name(no)
-        frame.push(frame.getlocal(name))
+        frame.push(frame.getlocal(no))
 
     def call(self, frame, funcname, numargs):
         if funcname == 'print':

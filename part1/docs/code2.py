@@ -7,6 +7,9 @@ def f(x):
         return "foo"
     return x
 
+def not_rpyhon():
+    XXX
+
 def entry_point(argv):
     print f(1) + f("foo")
     return 0

@@ -3,7 +3,7 @@ from rpython.jit.metainterp.test.support import LLJitMixin
 
 from interp.lexer import get_lexer
 from interp.parser import parser
-from interp.jit_interpreter import run
+from interp.interpreter import run
 from interp.astnodes import Bytecode
 
 lexer = get_lexer()
@@ -39,4 +39,6 @@ fun main()
     while i < 100 {
       i = i + 1;
     }
+    print(i);
 }        """)
+
