@@ -209,6 +209,16 @@ class While(AstNode):
         self.expr = expr
         self.stmt_list = stmt_list[:]
 
+    def eval(self, bc):
+        pos0 = bc.get_pos()
+        self.expr.eval(bc)
+        pos1 = bc.get_pos()
+        bc.emit1(opcodes.JUMP_IF_FALSE, 0)
+        for stmt in self.stmt_list:
+            stmt.eval(bc)
+        bc.emit1(opcodes.JUMP_ABSOLUTE, pos0)
+        bc.patch_pos(pos1 + 1, bc.get_pos())
+
 class Class(AstNode):
     def __init__(self, name, arglist):
         self.name = name

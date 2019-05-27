@@ -25,6 +25,7 @@ def run(bc, printfn):
     interpreter = Interpreter(bc, printfn)
     interpreter.interpret(bc.codes['main'])
 
+
 class Interpreter(object):
     def __init__(self, bc, printfn):
         self.bc = bc
@@ -59,6 +60,12 @@ class Interpreter(object):
                 self.call(frame, self.bc.names[arg0], arg1)
             elif code == opcodes.LOAD_INTEGER:
                 frame.push(Integer(arg0))
+            elif code == opcodes.JUMP_IF_FALSE:
+                val = frame.pop()
+                if not val.is_true():
+                    i = arg0
+            elif code == opcodes.JUMP_ABSOLUTE:
+                i = arg0
             else:
                 print "opcode " + str(code) + " not implemented"
                 raise Exception("unimplemented opcode " + str(code))
