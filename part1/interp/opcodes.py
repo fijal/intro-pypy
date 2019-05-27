@@ -1,0 +1,19 @@
+
+# no arg
+
+DISCARD = 1
+ADD = 2
+LT = 3
+
+# 1 arg
+
+LOAD_INTEGER = 100
+ASSIGN = 101
+LOAD_NAME = 102
+
+JUMP_IF_FALSE = 110
+JUMP_ABSOLUTE = 111
+
+# 2 arg
+
+CALL = 200

@@ -1,4 +1,6 @@
 
+from rpython.rlib.jit import JitDriver
+
 from interp.model import Integer, NoneObject
 from interp import opcodes
 
@@ -25,6 +27,8 @@ def run(bc, printfn):
     interpreter = Interpreter(bc, printfn)
     interpreter.interpret(bc.codes['main'])
 
+driver = JitDriver(reds = ['frame', 'i', 'bc', 'self'])
+
 class Interpreter(object):
     def __init__(self, bc, printfn):
         self.bc = bc
@@ -34,9 +38,10 @@ class Interpreter(object):
         bc = func.code
         frame = Frame()
         i = 0
-        arg0 = 0
-        arg1 = 0
         while i < len(bc):
+            driver.jit_merge_point(i=i, frame=frame, bc=bc, self=self)
+            arg0 = 0
+            arg1 = 0
             code = ord(bc[i])
             i += 1
             if code >= 100:
@@ -59,6 +64,13 @@ class Interpreter(object):
                 self.call(frame, self.bc.names[arg0], arg1)
             elif code == opcodes.LOAD_INTEGER:
                 frame.push(Integer(arg0))
+            elif code == opcodes.JUMP_ABSOLUTE:
+                i = arg0
+                driver.can_enter_jit(i=i, frame=frame, bc=bc, self=self)
+            elif code == opcodes.JUMP_IF_FALSE:
+                val = frame.pop()
+                if not val.is_true():
+                    i = arg0
             else:
                 print "opcode " + str(code) + " not implemented"
                 raise Exception("unimplemented opcode " + str(code))

@@ -4,7 +4,8 @@
 
 from interp.lexer import get_lexer
 from interp.parser import parser
-from interp.interpreter import interpret
+from interp.interpreter import run
+from interp.astnodes import Bytecode
 
 lexer = get_lexer()
 
@@ -21,7 +22,9 @@ def main(argv):
         print "Error reading " + argv[1]
         return 2
     ast = parser.parse(lexer.lex(contents))
-    interpret(ast, printfn)
+    bc = Bytecode()
+    ast.eval(bc)
+    run(bc, printfn)
     return 0
 
 def target(*args):

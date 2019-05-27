@@ -1,7 +1,8 @@
 
 from interp.parser import parser
 from interp.lexer import get_lexer
-from interp.interpreter import interpret
+from interp.interpreter import run
+from interp.astnodes import Bytecode
 
 class TestInterpreter(object):
     def setup_method(self, meth):
@@ -11,7 +12,10 @@ class TestInterpreter(object):
         def printfn(w_obj):
             self.printed.append(w_obj)
 
-        interpret(parser.parse(get_lexer().lex(code)), printfn)
+        ast = parser.parse(get_lexer().lex(code))
+        bc = Bytecode()
+        ast.eval(bc)
+        run(bc, printfn)
         return self.printed
     
     def test_basic(self):

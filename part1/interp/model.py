@@ -33,3 +33,6 @@ class Object(Root):
 
     def setitem(self, item, v):
         self.d[item] = v
+
+class NoneObject(Root):
+    pass
